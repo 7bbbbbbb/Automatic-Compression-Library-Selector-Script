@@ -3,20 +3,14 @@ import numpy as np
 from PIL import Image
 import os
 import re
-from skimage.metrics import structural_similarity as ssim  # Import SSIM metric
+from skimage.metrics import structural_similarity as ssim
 
 
 def calculate_metrics(image_path_1: str, image_path_2: str, max_i: float = 255.0):
-    """
-    Calculates Mean Squared Error (MSE), Peak Signal-to-Noise Ratio (PSNR),
-    and Structural Similarity Index (SSIM) between two images.
-    """
     try:
-        # Load images as RGB for MSE/PSNR calculation across all channels
         img_a_rgb = np.array(Image.open(image_path_1).convert('RGB'))
         img_b_rgb = np.array(Image.open(image_path_2).convert('RGB'))
 
-        # Load images as Grayscale (Luminance) for SSIM calculation
         img_a_gray = np.array(Image.open(image_path_1).convert('L'))
         img_b_gray = np.array(Image.open(image_path_2).convert('L'))
 
@@ -27,13 +21,11 @@ def calculate_metrics(image_path_1: str, image_path_2: str, max_i: float = 255.0
         print(f"Error loading images: {e} for {os.path.basename(image_path_1)} and {os.path.basename(image_path_2)}")
         return None, None, None
 
-    # --- Check Dimensions ---
     if img_a_rgb.shape != img_b_rgb.shape:
         print(
             f"Error: Dimension mismatch between {os.path.basename(image_path_1)} and {os.path.basename(image_path_2)}")
         return None, None, None
 
-    # --- 1. Calculate MSE and PSNR (using RGB arrays) ---
     difference = img_a_rgb.astype("float") - img_b_rgb.astype("float")
     squared_difference = difference ** 2
     mse_value = np.mean(squared_difference)
@@ -43,26 +35,17 @@ def calculate_metrics(image_path_1: str, image_path_2: str, max_i: float = 255.0
     else:
         psnr_value = 10 * np.log10((max_i ** 2) / mse_value)
 
-    # --- 2. Calculate SSIM (using Grayscale arrays) ---
-    # The SSIM function is called with:
-    # - full=False (default), just return the score
-    # - data_range=255 for 8-bit images (0-255 range)
     ssim_value = ssim(img_a_gray, img_b_gray, data_range=255)
 
     return mse_value, psnr_value, ssim_value
 
 
 def compare_folders(input_dir: str, output_dir: str, optimized_suffix: str):
-    """
-    Compares images between an input directory (reference) and an output directory (optimized)
-    based on the file stem matching pattern.
-    """
     input_images = {}
     output_images = {}
 
     IMAGE_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff')
 
-    # --- 1. Index Input (Reference) Images ---
     for root, _, files in os.walk(input_dir):
         relative_dir = os.path.relpath(root, input_dir)
 
@@ -74,7 +57,6 @@ def compare_folders(input_dir: str, output_dir: str, optimized_suffix: str):
             map_key = os.path.join(relative_dir, stem)
             input_images[map_key] = os.path.join(relative_dir, filename)
 
-    # --- 2. Index Output (Optimized) Images using Suffix Pattern ---
     pattern = re.compile(f'(.+?){optimized_suffix}(\..+)?$', re.IGNORECASE)
 
     for root, _, files in os.walk(output_dir):
@@ -89,7 +71,6 @@ def compare_folders(input_dir: str, output_dir: str, optimized_suffix: str):
                 map_key = os.path.join(relative_dir, original_stem)
                 output_images[map_key] = os.path.join(relative_dir, filename)
 
-    # --- 3. Perform Comparison ---
     results = []
 
     if not input_images:
@@ -110,30 +91,28 @@ def compare_folders(input_dir: str, output_dir: str, optimized_suffix: str):
                                 'status': 'Output File is Not an Image'})
                 continue
 
-            # Call the updated function
             mse, psnr, ssim_score = calculate_metrics(input_full_path, output_full_path, max_i=255.0)
 
             results.append({
                 'filename': input_relative_path,
                 'mse': f"{mse:.4f}" if mse is not None else 'Error',
                 'psnr': f"{psnr:.2f}" if psnr is not None else 'Error',
-                'ssim': f"{ssim_score:.4f}" if ssim_score is not None else 'Error',  # New SSIM entry
+                'ssim': f"{ssim_score:.4f}" if ssim_score is not None else 'Error',
                 'status': 'OK' if mse is not None else 'Error'
             })
         else:
             results.append({
                 'filename': input_relative_path,
-                'mse': 'N/A', 'psnr': 'N/A', 'ssim': 'N/A',  # Add N/A for SSIM
+                'mse': 'N/A', 'psnr': 'N/A', 'ssim': 'N/A',
                 'status': f'Missing Optimized File ({os.path.basename(map_key)}{optimized_suffix}*)'
             })
 
-    # --- 4. Print Results ---
     print("\n--- Image Quality Comparison Results (MSE/PSNR/SSIM) ---")
 
     FN_WIDTH = 45
     MSE_WIDTH = 12
     PSNR_WIDTH = 10
-    SSIM_WIDTH = 8  # New width for SSIM
+    SSIM_WIDTH = 8
     STATUS_WIDTH = 35
     TOTAL_WIDTH = FN_WIDTH + MSE_WIDTH + PSNR_WIDTH + SSIM_WIDTH + STATUS_WIDTH + 4
 
@@ -141,7 +120,7 @@ def compare_folders(input_dir: str, output_dir: str, optimized_suffix: str):
         f"{'Original Path/File':<{FN_WIDTH}} "
         f"{'MSE':>{MSE_WIDTH}} "
         f"{'PSNR (dB)':>{PSNR_WIDTH}} "
-        f"{'SSIM':>{SSIM_WIDTH}} "  # New SSIM header
+        f"{'SSIM':>{SSIM_WIDTH}} "
         f"{'Status':<{STATUS_WIDTH}}"
     )
     print(header)
@@ -156,7 +135,7 @@ def compare_folders(input_dir: str, output_dir: str, optimized_suffix: str):
             f"{display_filename:<{FN_WIDTH}} "
             f"{r['mse']:>{MSE_WIDTH}} "
             f"{r['psnr']:>{PSNR_WIDTH}} "
-            f"{r['ssim']:>{SSIM_WIDTH}} "  # New SSIM value
+            f"{r['ssim']:>{SSIM_WIDTH}} "
             f"{r['status']:<{STATUS_WIDTH}}"
         )
         print(line)
