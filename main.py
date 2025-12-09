@@ -10,6 +10,7 @@ import comparator_image
 import comparator_audio
 import comparator_video
 import compressor_zip
+import time
 
 # Compression Parameters
 INPUT_FOLDER = "input_test"
@@ -26,6 +27,7 @@ if __name__ == "__main__":
     print("\n" + "--- AUTOMATIC DATA COMPRESSION TOOL ---")
     print("\n" + "=" * 70)
     compressor_zip.delete_directory_contents(OUTPUT_FOLDER)
+    start_main_time = time.time()
     if AVOID_DATA_LOSS:
         compressor_mozjpeg.optimize_folder_batch(INPUT_FOLDER, OUTPUT_FOLDER, 100)
         compressor_oxipng.optimize_folder_with_oxipng(INPUT_FOLDER, OUTPUT_FOLDER, 6, png_only=True)
@@ -105,3 +107,5 @@ if __name__ == "__main__":
         print("\n--- FOLDER COMPRESSION COMPLETED ---")
         print(f"\nCompressed files are located in the {OUTPUT_FOLDER} folder.")
         compressor_zip.compare_file_system_sizes(INPUT_FOLDER, OUTPUT_FOLDER)
+    total_main_time = time.time() - start_main_time
+    print(f"Total Compression Time: {total_main_time:.4f} seconds")
